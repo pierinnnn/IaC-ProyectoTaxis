@@ -43,6 +43,11 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" { //Vincula
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" { //Politica para crear la vpc
+    role       = aws_iam_role.lambda_taxis_exec_role.name
+    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 resource "aws_lambda_function" "taxis" {
   function_name    = "taxis"
   handler          = "index.handler"
@@ -53,9 +58,41 @@ resource "aws_lambda_function" "taxis" {
 
   environment {
     variables = {
-      HELLO = "WORLD"
+      DB_HOST     = "db-taxis-viajes-usuarios.cbmia0266pjz.us-east-2.rds.amazonaws.com" //endpoint
+      DB_USER     = "IACgrupo7" //master username
+      DB_PASSWORD = "grupo7_rds" //password
+      DB_NAME     = "db-taxis-viajes-usuarios"
     }
   }
+
+  vpc_config {
+    subnet_ids         = [
+                          data.aws_subnet.public1-us-east-2a.id, //Solo 2 subnets
+                          data.aws_subnet.public2-us-east-2b.id
+                          ]
+    security_group_ids = [data.aws_security_group.lambda_sg.id]
+  }
+  
+}
+
+data "aws_subnet" "public1-us-east-2a" {
+  id = "subnet-0f3b032d13c823454"
+}
+
+data "aws_subnet" "public2-us-east-2b" {
+  id = "subnet-0a9a32b0b128ed6c3"
+}
+
+data "aws_subnet" "private1-us-east-2a" {
+  id = "subnet-0ca0a62770356adba"
+}
+
+data "aws_subnet" "private2-us-east-2b" {
+  id = "subnet-09b3130da42f77519"
+}
+
+data "aws_security_group" "lambda_sg" {
+  id = "sg-01a5fdf9b8fe18508"
 }
 
 resource "aws_lambda_permission" "allow_s3" { //Permiso para que el s3 pueda invocar el lambda

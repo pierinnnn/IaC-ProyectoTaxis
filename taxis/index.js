@@ -1,6 +1,44 @@
-const AWS = require('aws-sdk');
-//Lambda
+const { Client } = require('pg');
+
 exports.handler = async (event) => {
-    console.log("Solicitud de taxi!!", JSON.stringify(event))
-    console.log(process.env)
-}
+  const { placa, color, modelo, conductor } = JSON.parse(event.body);
+
+  // Validar si faltan datos
+  if (!placa || !color || !modelo || !conductor) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: 'Faltan datos obligatorios.' })
+    };
+  }
+
+  // Conexión a la base de datos
+  const client = new Client({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: 5432,
+    ssl: { rejectUnauthorized: false }
+  });
+
+  try {
+    await client.connect();
+
+    // Consulta para insertar los datos
+    const query = 'INSERT INTO taxis (placa, color, modelo, conductor) VALUES ($1, $2, $3, $4)';
+    await client.query(query, [placa, color, modelo, conductor]);
+
+    await client.end();
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Datos insertados correctamente.' })
+    };
+  } catch (error) {
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: 'Hubo un error al insertar los datos.', error: error.message })
+    };
+  }
+};
+
