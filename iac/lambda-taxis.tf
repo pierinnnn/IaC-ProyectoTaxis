@@ -43,7 +43,7 @@ resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" { //Vincula
   policy_arn = aws_iam_policy.lambda_policy.arn
 }
 
-resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" { //Politica para crear la vpc
+resource "aws_iam_role_policy_attachment" "AWSLambdaVPCAccessExecutionRole" { //Politica para almacenar la funcion en la vpc
     role       = aws_iam_role.lambda_taxis_exec_role.name
     policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
@@ -101,16 +101,4 @@ resource "aws_lambda_permission" "allow_s3" { //Permiso para que el s3 pueda inv
   function_name = aws_lambda_function.taxis.function_name
   principal     = "s3.amazonaws.com"
   source_arn    = aws_s3_bucket.bucket.arn
-}
-
-resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = aws_s3_bucket.bucket.id
-
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.taxis.arn
-    events              = ["s3:ObjectCreated:*"] //Se activa cuando un usuario solicita un taxi
-  }
-
-  //Garantizar que primero llame a un recurso antes de ejecutar este codigo
-  depends_on = [aws_lambda_permission.allow_s3]
 }
