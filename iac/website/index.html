@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="https://cdn.jsdelivr.net/npm/amazon-cognito-identity-js@6.2.0/dist/amazon-cognito-identity.min.js"></script>
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.1481.0.min.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mi Web con CloudFront y API Gateway</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f4f4f4;
+    }
+
+    .login-container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      width: 300px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <h2>Iniciar sesión</h2>
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Usuario" required />
+      <input type="password" id="password" placeholder="Contraseña" required />
+      <button type="submit">Iniciar sesión</button>
+    </form>
+
+    <div class="message" id="message"></div>
+  </div>
+
+  <script>
+    // Asegúrate de que la librería esté completamente cargada
+    window.onload = function () {
+      const poolData = {
+        UserPoolId: "us-east-2_cIsb7VU52", // Tu UserPool ID
+        ClientId: "unbeta0vab6ru98jccer84vim" // Tu App Client ID
+      };
+
+      const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+
+      // Controlador de evento de formulario
+      document.getElementById("loginForm").addEventListener("submit", function (e) {
+        e.preventDefault(); // Evita que se recargue la página al enviar el formulario
+
+        const username = document.getElementById("username").value;
+        const password = document.getElementById("password").value;
+
+        const authenticationData = {
+          Username: username,
+          Password: password
+        };
+
+        const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails(authenticationData);
+
+        const userData = {
+          Username: username,
+          Pool: userPool
+        };
+
+        const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+
+        cognitoUser.authenticateUser(authenticationDetails, {
+          onSuccess: function (result) {
+            console.log("✅ Autenticado correctamente");
+            const accessToken = result.getAccessToken().getJwtToken();
+            console.log("Access Token:", accessToken);
+            document.getElementById("message").innerText = "¡Inicio de sesión exitoso!";
+            
+            // Ahora que tienes el token, consume la API
+            const apiUrl = "https://9uhrmss5wl.execute-api.us-east-2.amazonaws.com/prod";  // URL de API
+
+            const dataToSend = {
+              nombre: "Piero",
+              correo: "piero@taxis.com",
+              contraseña: "Test_grupo7" // Este es solo un ejemplo
+            };
+
+            // Hacer la solicitud POST a la API Gateway
+            fetch(apiUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${accessToken}`
+              },
+              body: JSON.stringify(dataToSend)
+            })
+            .then(response => response.json())
+            .then(data => {
+              console.log("Datos recibidos de la API:", data);
+              alert("Respuesta de la API: " + JSON.stringify(data));
+            })
+            .catch(error => {
+              console.error("Error al consumir la API:", error);
+              alert("Hubo un error al intentar enviar los datos.");
+            });
+          },
+
+          onFailure: function (err) {
+            console.error("❌ Fallo al autenticar:", err.message || JSON.stringify(err));
+            document.getElementById("message").innerText = "Error: " + err.message;
+          }
+        });
+      });
+    };
+  </script>
+
+</body>
+</html>
